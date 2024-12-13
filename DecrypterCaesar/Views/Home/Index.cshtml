@@ -1,0 +1,142 @@
+﻿@model DecrypterCaesar.Models.CaesarCipherModel
+
+@{
+    ViewBag.Title = "Caesar Cipher Tool";
+}
+
+<h2>Caesar Cipher Tool</h2>
+
+<div class="container">
+    <form asp-action="ProcessText" method="post">
+        <div class="form-group">
+            <label for="InputText">Input Text</label>
+            <textarea id="InputText" name="InputText" class="form-control" rows="5" required>@Model.InputText</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="Key">Shift Key</label>
+            <input type="number" id="Key" name="Key" class="form-control" value="@Model.Key" required />
+        </div>
+
+        <div class="form-group">
+            <button type="submit" name="actionType" value="Encrypt" class="btn btn-success">Encrypt</button>
+            <button type="submit" name="actionType" value="Decrypt" class="btn btn-primary">Decrypt</button>
+            <button type="submit" name="actionType" value="BruteForceDecrypt" class="btn btn-warning">Brute Force Decrypt</button>
+            <button type="submit" name="actionType" value="FrequencyAnalysis" class="btn btn-info">Frequency Analysis</button>
+        </div>
+    </form>
+
+    @if (!string.IsNullOrEmpty(Model.OutputText))
+    {
+        <div class="mt-4">
+            <h3>Result Output</h3>
+            <p><strong>Output Text:</strong> @Model.OutputText</p>
+        </div>
+    }
+
+    @if (Model.BruteForceResults?.Any() == true)
+    {
+        <div class="mt-4">
+            <h3>Brute Force Decryption Results</h3>
+            <ul>
+                @foreach (var result in Model.BruteForceResults)
+                {
+                    <li>@result</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.MostLikelyPlainText))
+    {
+        <div class="mt-4">
+            <h3>Most Likely Decryption</h3>
+            <p><strong>Most Likely Shift:</strong> @Model.MostLikelyShift</p>
+            <p><strong>Plain Text:</strong> @Model.MostLikelyPlainText</p>
+
+            <form asp-action="ProcessText" method="post" class="mt-3">
+                <input type="hidden" name="InputText" value="@Model.InputText" />
+                <input type="hidden" name="Key" value="@Model.Key" />
+                <button type="submit" name="actionType" value="NextMostLikely" class="btn btn-secondary">Next Most Likely</button>
+            </form>
+        </div>
+    }
+
+    @if (Model.FrequencyAnalysisResults?.Any() == true)
+    {
+        <div class="mt-4">
+            <h3>Frequency Analysis Results</h3>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Letter</th>
+                        <th>Count</th>
+                        <th>Percentage (%)</th>
+                        <th>English Frequency (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var result in Model.FrequencyAnalysisResults.OrderBy(r => r.Letter))
+                    {
+                        <tr>
+                            <td>@result.Letter</td>
+                            <td>@result.Count</td>
+                            <td>@result.Percentage</td>
+                            <td>@result.EnglishFrequency</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div>
+                <h4>Frequency Chart</h4>
+                <canvas id="frequencyChart"></canvas>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sort the data alphabetically by letter
+        const sortedResults = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.FrequencyAnalysisResults.OrderBy(r => r.Letter)));
+
+        const frequencyData = {
+            labels: sortedResults.map(r => r.Letter),
+            datasets: [
+                {
+                    label: 'Text Frequency (%)',
+                    data: sortedResults.map(r => r.Percentage),
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'English Frequency (%)',
+                    data: sortedResults.map(r => r.EnglishFrequency),
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        const config = {
+            type: 'bar',
+            data: frequencyData,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        };
+
+        const frequencyChart = new Chart(
+            document.getElementById('frequencyChart'),
+            config
+        );
+    </script>
+}
